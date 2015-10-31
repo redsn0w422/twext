@@ -1,3 +1,6 @@
+html {
+  /*background-color: rgba(52, 152, 219,.2);*/
+}
 body {
   padding: 50px;
   font: 14px "Lucida Grande", Helvetica, Arial, sans-serif;
@@ -5,4 +8,29 @@ body {
 
 a {
   color: #00B7FF;
+}
+
+.text-center {
+  text-align: center;
+}
+
+#logo {
+  width:300px;
+}
+#logo-div {
+  width:300px;
+  margin-left: auto;
+  margin-right: auto;
+}
+#main {
+  width:700px;
+  margin-left: auto;
+  margin-right: auto;
+  text-align: center;
+}
+.form {
+  margin-top: 150px;
+  width:50%;
+  margin-left: auto;
+  margin-right: auto;
 }
