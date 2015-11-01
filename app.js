@@ -10,7 +10,8 @@ var users = require('./routes/users');
 var config = require('./config');
 var MongoClient = require('mongodb').MongoClient
 var assert = require('assert');
-var MONGO_URL = 'mongodb://localhost:27017/';
+// var MONGO_URL = 'mongodb://localhost:27017/';
+var MONGO_URL = 'mongodb://mem:mem@ds039504.mongolab.com:39504/documents';
 var COLL_NAME = 'documents';
 var async = require('async');
 
