@@ -65,20 +65,19 @@ checkStream = function(channel, number, callback) {
 }
 
 checkStream_state = function(channel, number, state, collection, channels) {
-  console.log("\t\tCHECKING");
-  console.log("\t\t\t" + channel + " for " + number);
+  console.log("\t\t\tchecking: " + channel + " for " + number);
   var url = "https://api.twitch.tv/kraken/streams/" + channel;
   request(url, function (error, response, body) {
     json = JSON.parse(body);
     if (json.stream) {
       // stream is online
       if (state == 1) {
-        console.log("ONLINE AND TRUE");
+        console.log("\t\t\tONLINE AND TRUE");
         // state is true
         // do nothing
       }
       else {
-        console.log("ONLINE AND FALSE");
+        console.log("\t\t\tONLINE AND FALSE");
         // state is false
         // set state to true
         new_channels = channels;
@@ -105,7 +104,7 @@ checkStream_state = function(channel, number, state, collection, channels) {
     else {
       // stream is offline
       if (state == 1) {
-        console.log("OFFLINE AND TRUE");
+        console.log("\t\t\tOFFLINE AND TRUE");
         // state is true
         // set to false
         new_channels = channels;
@@ -118,7 +117,7 @@ checkStream_state = function(channel, number, state, collection, channels) {
 
       }
       else {
-        console.log("OFFLINE AND FALSE");
+        console.log("\t\t\tOFFLINE AND FALSE");
         // state is false
         // do nothing
       }
@@ -178,9 +177,8 @@ is_in_db = function(collection, number, channel) {
   // 0 is found, but no channel yet
   // 1 is found and number -> simply text current status
   collection.findOne({number: number}, function(err, docs){
-    console.log(docs);
     if (docs){
-      if (is_in_arr(docs.channels, channel)){
+      if (is_in_arr(docs.channels, number, channel)){
         console.log("found and number -> text");
         saveToDB_callback(1, collection, number, channel);
       }
@@ -196,8 +194,14 @@ is_in_db = function(collection, number, channel) {
   });
 }
 
-is_in_arr = function(arr, item){
-  return (arr.indexOf(item) > -1);
+is_in_arr = function(arr, number, channel){
+  for (i=0; i<arr.length; i++)
+  {
+    if (arr[i][0] == channel) {
+      return true;
+    }
+  }
+  return false;
 }
 
 MAIN_LOOP = function(){
