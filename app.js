@@ -9,7 +9,10 @@ var routes = require('./routes/index');
 var users = require('./routes/users');
 var config = require('./config');
 var MongoClient = require('mongodb').MongoClient
-  , assert = require('assert');
+var assert = require('assert');
+var MONGO_URL = 'mongodb://localhost:27017/';
+var COLL_NAME = 'documents';
+
 
 var request = require('request');
 var client = require('twilio')(config.accountSid, config.authToken);
@@ -36,18 +39,6 @@ app.use('/users', users);
 
 var states = {};
 
-MAIN_LOOP = function(){
-  // checkStream("tsm_bjergsen", "6303037034", checked);
-  // checkStream("dreamhackcs", "6307294437", checked);
-
-
-  // client.messages.create({
-  //   body: "if you had two penises, would one of them be mine?",
-  //   to: "6308158668",
-  //   from: "+13313056064"
-  // });
-}
-
 checkStream = function(channel, number, callback) {
   var url = "https://api.twitch.tv/kraken/streams/" + channel;
   request(url, function (error, response, body) {
@@ -70,16 +61,147 @@ checked = function(live, number, channel){
     body: channel + str + "live.",
     to: number,
     from: "+13313056064"
+  }, function(err, message){
+    process.stdout.write(message.sid);
+    console.log("\ndone\n");
   });
 }
 
+// Connection URL
+// Use connect method to connect to the Server
+// MongoClient.connect(url, function(err, db) {
+  // assert.equal(null, err);
+  // console.log("Connected correctly to server");
+
+    // var collection = db.collection('documents');
+    // Insert some documents
+    // collection.insertMany([
+    //   {a : 1}, {a : 2}, {a : 3}
+    // ], function(err, result) {
+    //   assert.equal(err, null);
+    //   assert.equal(3, result.result.n);
+    //   assert.equal(3, result.ops.length);
+    //   console.log("Inserted 3 documents into the document collection");
+    //   db.close();
+    // });
+    // collection.find({}).toArray(function(err, docs) {
+    //   assert.equal(err, null);
+    //   console.log("Found the following records");
+    //   console.dir(docs);
+    //   db.close();
+    // });
+
+//     collection.find({}).toArray(function(err, docs) {
+//   assert.equal(err, null);
+//   assert.equal(2, docs.length);
+//   console.log("Found the following records");
+//   console.dir(docs);
+//   callback(docs);
+// });
+// db.students.update(
+//    { _id: 1 },
+//    { $push: { scores: 89 } }
+// )
+
+
+// });
+
+saveToDB = function(number, channel){
+  MongoClient.connect(MONGO_URL, function(err, db){
+    assert.equal(null, err);
+    console.log("\tmongo connected");
+    // insert into db
+    var collection = db.collection(COLL_NAME);
+    is_in_db(collection, number, channel);
+  });
+}
+
+saveToDB_callback = function(status, collection, number, channel)
+{
+  console.log("\tSTATUS: " + status);
+  if (status == 1){
+    checkStream(channel, number, checked);
+  }
+  else if (status == 0){
+    collection.update({number: number},{$push: {channels: {url: channel, state: 0}}},
+    function(err, result){
+      // console.log(result);
+    });
+  }
+  else {
+    collection.insert({number: number, channels: [{url: channel, state: 0}]},
+    function(err, result){
+      // console.log(result);
+    });
+  }
+}
+
+is_in_db = function(collection, number, channel) {
+  // -1 is not found
+  // 0 is found, but no channel yet
+  // 1 is found and number -> simply text current status
+  collection.findOne({number: number}, function(err, docs){
+    console.log(docs);
+    if (docs){
+      if (is_in_arr(docs.channels, channel)){
+        console.log("found and number -> text");
+        saveToDB_callback(1, collection, number, channel);
+      }
+      else {
+        console.log("found, no channel yet");
+        saveToDB_callback(0, collection, number, channel);
+      }
+    }
+    else {
+      console.log("no number");
+      saveToDB_callback(-1, collection, number, channel);
+    }
+  });
+}
+
+is_in_arr = function(arr, item){
+  return (arr.indexOf(item) > -1);
+}
+
+MAIN_LOOP = function(){
+  // checkStream("tsm_bjergsen", "6303037034", checked);
+  // checkStream("dreamhackcs", "6307294437", checked);
+
+
+  // client.messages.create({
+  //   body: "you're my rarest pepe :)",
+  //   to: "7086463598",
+  //   from: "+13313056064"
+  // });
+  // saveToDB("+16303037034", "riotgames");
+  MongoClient.connect(MONGO_URL, function(err, db){
+    assert.equal(null, err);
+    console.log("\tmongo connected");
+    // loop
+    var collection = db.collection(COLL_NAME);
+    collection.find({}).toArray(function(err, docs){
+      console.log(docs);
+      docs.map(function(item){
+        console.log(item);
+      });
+    });
+  });
+}
+
+
+// **********************************
+// this is where the magic happens
 MAIN_LOOP();
+// **********************************
+
 
 app.post('/incoming', function(req, res, next){
   var message = req.body.Body;
   var from = req.body.From;
   console.log("\t" + message + "\n\tfrom: " + from);
   checkStream(message, from, checked);
+  saveToDB(from, message);
+  // if (message == "hi")
 });
 
 
