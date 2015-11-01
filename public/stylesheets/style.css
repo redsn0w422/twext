@@ -1,9 +1,17 @@
 html {
   /*background-color: rgba(52, 152, 219,.2);*/
+  background: url('http://i.4cdn.org/wg/1446359693504.png') no-repeat center center fixed;
+  -webkit-background-size: cover;
+  -moz-background-size: cover;
+  -o-background-size: cover;
+  background-size: cover;
 }
 body {
-  padding: 50px;
+  padding: 15%;
   font: 14px "Lucida Grande", Helvetica, Arial, sans-serif;
+  background: rgba(52, 152, 219,.2);
+  height:100vh;
+  width: 100vw;
 }
 
 a {
@@ -27,6 +35,7 @@ a {
   margin-left: auto;
   margin-right: auto;
   text-align: center;
+  color: white;
 }
 .form {
   margin-top: 150px;
