@@ -166,7 +166,15 @@ is_in_arr = function(arr, item){
 MAIN_LOOP = function(){
   // checkStream("tsm_bjergsen", "6303037034", checked);
   // checkStream("dreamhackcs", "6307294437", checked);
+  /**
+  if state is false and channel is online -> text user, set state to true
 
+  if state is true and channel is online -> do nothing
+
+  if state is true and channel is offline -> set to false
+
+  if state is false and channel is offline -> do nothing
+  */
 
   // client.messages.create({
   //   body: "you're my rarest pepe :)",
@@ -176,18 +184,37 @@ MAIN_LOOP = function(){
   // saveToDB("+16303037034", "riotgames");
   MongoClient.connect(MONGO_URL, function(err, db){
     assert.equal(null, err);
-    console.log("\tmongo connected");
+    console.log("\tmongo connected\n\n");
     // loop
     var collection = db.collection(COLL_NAME);
     collection.find({}).toArray(function(err, docs){
-      console.log(docs);
       docs.map(function(item){
-        console.log(item);
+        number = item.number;
+        channels = item.channels;
+        console.log("checking " + number);
+        for (i=0; i<channels.length; i++) {
+          url = channels[i].url;
+          status = channels[i].status;
+          console.log("\t" + channels[i].url);
+        }
+        console.log();
       });
+      // setTimeout(MAIN_LOOP(), 30000);
+      // var time = 100;
+      // var stop = new Date().getTime();
+      // while(new Date().getTime() < stop + time) {
+      //   // console.log("waiting");
+      //     ;
+      // }
+
+      // setTimeout(MAIN_LOOP(), 30000);
     });
   });
 }
 
+reloop = function(){
+  setTimeout(MAIN_LOOP(), 30000);
+}
 
 // **********************************
 // this is where the magic happens
@@ -204,6 +231,18 @@ app.post('/incoming', function(req, res, next){
   // if (message == "hi")
 });
 
+app.post('/signup', function(req, res, next){
+  var number = req.body.number;
+  console.log(req.body);
+  client.messages.create({
+    body: "Welcome to twext!\nRespond with a twitch channel to start.",
+    to: number,
+    from: "+13313056064"
+  }, function(err, message){
+    process.stdout.write(message.sid);
+    console.log("\ndone\n");
+  });
+});
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
