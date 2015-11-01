@@ -12,6 +12,7 @@ var MongoClient = require('mongodb').MongoClient
 var assert = require('assert');
 var MONGO_URL = 'mongodb://localhost:27017/';
 var COLL_NAME = 'documents';
+var async = require('async');
 
 
 var request = require('request');
@@ -39,6 +40,15 @@ app.use('/users', users);
 
 var states = {};
 
+findIndex_complicated = function(channels, channel) {
+  for (i=0; i<channels.length; i++){
+    if (channels[i][0] == channel) {
+      return i;
+    }
+  }
+  return -1;
+}
+
 checkStream = function(channel, number, callback) {
   var url = "https://api.twitch.tv/kraken/streams/" + channel;
   request(url, function (error, response, body) {
@@ -50,6 +60,68 @@ checkStream = function(channel, number, callback) {
     else {
       // stream is online
       callback(false, number, channel);
+    }
+  });
+}
+
+checkStream_state = function(channel, number, state, collection, channels) {
+  console.log("\t\tCHECKING");
+  console.log("\t\t\t" + channel + " for " + number);
+  var url = "https://api.twitch.tv/kraken/streams/" + channel;
+  request(url, function (error, response, body) {
+    json = JSON.parse(body);
+    if (json.stream) {
+      // stream is online
+      if (state == 1) {
+        console.log("ONLINE AND TRUE");
+        // state is true
+        // do nothing
+      }
+      else {
+        console.log("ONLINE AND FALSE");
+        // state is false
+        // set state to true
+        new_channels = channels;
+        index = findIndex_complicated(channels, channel);
+        // console.log(channel);
+        // console.log(channels[index]);
+        new_channels[index][1] = 1;
+        // console.log(new_channels);
+
+        client.messages.create({
+          body: channel + " is live.",
+          to: number,
+          from: "+13313056064"
+        }, function(err, message){
+          process.stdout.write(message.sid);
+          console.log("\ndone\n");
+          collection.update({number: number},{$set: {channels: new_channels}},
+          function(err, result){
+            // console.log(result);
+          });
+        });
+      }
+    }
+    else {
+      // stream is offline
+      if (state == 1) {
+        console.log("OFFLINE AND TRUE");
+        // state is true
+        // set to false
+        new_channels = channels;
+        index = findIndex_complicated(channels, channel);
+        new_channels[index][1] = 0;
+        collection.update({number: number},{$set: {channels: new_channels}},
+        function(err, result){
+          // console.log(result);
+        });
+
+      }
+      else {
+        console.log("OFFLINE AND FALSE");
+        // state is false
+        // do nothing
+      }
     }
   });
 }
@@ -66,45 +138,6 @@ checked = function(live, number, channel){
     console.log("\ndone\n");
   });
 }
-
-// Connection URL
-// Use connect method to connect to the Server
-// MongoClient.connect(url, function(err, db) {
-  // assert.equal(null, err);
-  // console.log("Connected correctly to server");
-
-    // var collection = db.collection('documents');
-    // Insert some documents
-    // collection.insertMany([
-    //   {a : 1}, {a : 2}, {a : 3}
-    // ], function(err, result) {
-    //   assert.equal(err, null);
-    //   assert.equal(3, result.result.n);
-    //   assert.equal(3, result.ops.length);
-    //   console.log("Inserted 3 documents into the document collection");
-    //   db.close();
-    // });
-    // collection.find({}).toArray(function(err, docs) {
-    //   assert.equal(err, null);
-    //   console.log("Found the following records");
-    //   console.dir(docs);
-    //   db.close();
-    // });
-
-//     collection.find({}).toArray(function(err, docs) {
-//   assert.equal(err, null);
-//   assert.equal(2, docs.length);
-//   console.log("Found the following records");
-//   console.dir(docs);
-//   callback(docs);
-// });
-// db.students.update(
-//    { _id: 1 },
-//    { $push: { scores: 89 } }
-// )
-
-
-// });
 
 saveToDB = function(number, channel){
   MongoClient.connect(MONGO_URL, function(err, db){
@@ -123,13 +156,17 @@ saveToDB_callback = function(status, collection, number, channel)
     checkStream(channel, number, checked);
   }
   else if (status == 0){
-    collection.update({number: number},{$push: {channels: {url: channel, state: 0}}},
+    var query = {};
+    query[channel] = 0;
+    collection.update({number: number},{$push: {channels: [channel, 0]}},
     function(err, result){
       // console.log(result);
     });
   }
   else {
-    collection.insert({number: number, channels: [{url: channel, state: 0}]},
+    var query = {};
+    query[channel] = 0;
+    collection.insert({number: number, channels: [[channel, 0]]},
     function(err, result){
       // console.log(result);
     });
@@ -176,12 +213,6 @@ MAIN_LOOP = function(){
   if state is false and channel is offline -> do nothing
   */
 
-  // client.messages.create({
-  //   body: "you're my rarest pepe :)",
-  //   to: "7086463598",
-  //   from: "+13313056064"
-  // });
-  // saveToDB("+16303037034", "riotgames");
   MongoClient.connect(MONGO_URL, function(err, db){
     assert.equal(null, err);
     console.log("\tmongo connected\n\n");
@@ -192,38 +223,44 @@ MAIN_LOOP = function(){
         number = item.number;
         channels = item.channels;
         console.log("checking " + number);
+        // console.log(channels);
         for (i=0; i<channels.length; i++) {
-          url = channels[i].url;
-          status = channels[i].status;
-          console.log("\t" + channels[i].url);
+          url = channels[i][0];
+          status = channels[i][1];
+          checkStream_state(url, number, status, collection, channels);
+          console.log("\t" + channels[i]);
         }
-        console.log();
       });
-      // setTimeout(MAIN_LOOP(), 30000);
-      // var time = 100;
-      // var stop = new Date().getTime();
-      // while(new Date().getTime() < stop + time) {
-      //   // console.log("waiting");
-      //     ;
-      // }
-
-      // setTimeout(MAIN_LOOP(), 30000);
     });
   });
 }
 
 reloop = function(){
-  setTimeout(MAIN_LOOP(), 30000);
+  // setTimeout(MAIN_LOOP(), 2000);
+  async.waterfall([
+      function(callback) {
+        console.log("first part");
+        MAIN_LOOP(callback);
+      },
+      function(callback) {
+        console.log("second part");
+        // arg1 now equals 'one' and arg2 now equals 'two'
+        setTimeout(MAIN_LOOP(callback), 2000);
+      }
+  ], function (err, result) {
+      // result now equals 'done'
+      console.log(result);
+  });
 }
 
 // **********************************
 // this is where the magic happens
-MAIN_LOOP();
+setInterval(function(){MAIN_LOOP();}, 30000);
 // **********************************
 
 
 app.post('/incoming', function(req, res, next){
-  var message = req.body.Body;
+  var message = req.body.Body.toLowerCase();
   var from = req.body.From;
   console.log("\t" + message + "\n\tfrom: " + from);
   checkStream(message, from, checked);
