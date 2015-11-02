@@ -250,7 +250,7 @@ reloop = function(){
       function(callback) {
         console.log("second part");
         // arg1 now equals 'one' and arg2 now equals 'two'
-        setTimeout(MAIN_LOOP(callback), 2000);
+        setTimeout(MAIN_LOOP(callback), 30000);
       }
   ], function (err, result) {
       // result now equals 'done'
@@ -260,7 +260,7 @@ reloop = function(){
 
 // **********************************
 // this is where the magic happens
-setInterval(function(){MAIN_LOOP();}, 30000);
+setInterval(function(){MAIN_LOOP();}, 10000);
 // **********************************
 
 
